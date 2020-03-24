@@ -497,7 +497,7 @@ class LineChart extends AbstractChart {
       paddingRight = 64,
       margin = 0,
       marginRight = 0,
-      paddingBottom = 0,
+      paddingBottom = 0
     } = style;
 
     const config = {
@@ -516,8 +516,6 @@ class LineChart extends AbstractChart {
 
     const legendOffset = this.props.data.legend ? height * 0.15 : 0;
 
-    console.log(transparent);
-    
     return (
       <View style={style}>
         <Svg
