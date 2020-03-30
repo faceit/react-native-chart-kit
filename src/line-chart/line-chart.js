@@ -1,12 +1,5 @@
 import React from "react";
-import {
-  View,
-  ScrollView,
-  StyleSheet,
-  Animated,
-  Text,
-  TextInput
-} from "react-native";
+import { View, ScrollView, StyleSheet, Animated, Text, TextInput } from "react-native";
 import {
   Svg,
   Circle,
@@ -22,10 +15,11 @@ import { LegendItem } from "./legend-item";
 let AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 class LineChart extends AbstractChart {
+
   label = React.createRef();
 
   state = {
-    x: new Animated.Value(0)
+    x: new Animated.Value(0),
   };
 
   getColor = (dataset, opacity) => {
@@ -122,6 +116,23 @@ class LineChart extends AbstractChart {
     return output;
   };
 
+  linearInterpolate = function(prev, next, point) {
+    return prev + (next - prev) * point;
+  };
+
+  getNumUndefinedUntilNextVal = function(arr, index) {
+    let numUndefined = 0;
+    for (let i = index; i < arr.length; i++) {
+      if (typeof arr[i] === 'undefined') {
+        numUndefined++;
+      } else {
+        break;
+      }
+    }
+    return numUndefined;
+  };
+
+
   renderScrollableDot = config => {
     const {
       data,
@@ -140,166 +151,214 @@ class LineChart extends AbstractChart {
       scrollableInfoOffset
     } = config;
     const output = [];
-    const datas = this.getDatas(data);
+    const datas = this.getDatas(data).filter(e => e != undefined);
     const baseHeight = this.calcBaseHeight(datas, height);
 
-    let vl = [];
 
-    const perData = width / data[0].data.length;
-    for (let index = 0; index < data[0].data.length; index++) {
-      vl.push(index * perData);
-    }
-    let lastIndex;
 
-    x.addListener(value => {
-      const index = value.value / perData;
-      if (!lastIndex) {
-        lastIndex = index;
-      }
-
-      let abs = Math.floor(index);
-      let percent = index - abs;
-      abs = data[0].data.length - abs - 1;
-
-      if (index >= data[0].data.length - 1) {
-        this.label.current.setNativeProps({
-          text: `${Math.floor(data[0].data[0])}`
-        });
-      } else {
-        if (index > lastIndex) {
-          // to right
-
-          const base = data[0].data[abs];
-          const prev = data[0].data[abs - 1];
-          if (prev > base) {
-            let rest = prev - base;
-            this.label.current.setNativeProps({
-              text: `${Math.floor(base + percent * rest)}`
-            });
-          } else {
-            let rest = base - prev;
-            this.label.current.setNativeProps({
-              text: `${Math.floor(base - percent * rest)}`
-            });
-          }
-        } else {
-          // to left
-
-          const base = data[0].data[abs - 1];
-          const next = data[0].data[abs];
-          percent = 1 - percent;
-          if (next > base) {
-            let rest = next - base;
-            this.label.current.setNativeProps({
-              text: `${Math.floor(base + percent * rest)}`
-            });
-          } else {
-            let rest = base - next;
-            this.label.current.setNativeProps({
-              text: `${Math.floor(base - percent * rest)}`
-            });
-          }
-        }
-      }
-      lastIndex = index;
-    });
 
     data.forEach(dataset => {
       if (dataset.withScrollableDot == false) return;
 
-      const perData = width / dataset.data.length;
-      let values = [];
-      let yValues = [];
-      let xValues = [];
+      const data = dataset.data
+      const normalizedData = dataset.data.filter(e => e != undefined)
 
-      let yValuesLabel = [];
-      let xValuesLabel = [];
+      const perData = width / data.length
+      let values = []
+      let yValues = []
+      let xValues = []
 
-      for (let index = 0; index < dataset.data.length; index++) {
-        values.push(index * perData);
-        const yval =
-          ((baseHeight -
-            this.calcHeight(
-              dataset.data[dataset.data.length - index - 1],
-              datas,
-              height
-            )) /
-            4) *
-            3 +
-          paddingTop;
-        yValues.push(yval);
-        const xval =
-          paddingRight +
-          ((dataset.data.length - index - 1) * (width - paddingRight)) /
-            dataset.data.length;
-        xValues.push(xval);
+      let yValuesLabel = []
+      let xValuesLabel = []
 
-        scrollableInfoOffset;
-        yValuesLabel.push(
-          yval - (scrollableInfoSize.height + scrollableInfoOffset)
-        );
-        xValuesLabel.push(xval - scrollableInfoSize.width / 2);
+      let undefinedCount = 0
+      let allUndefined = 0
+
+      for (let index = data.length; index >= 0; index--) {
+        if (data[index] != undefined) {
+          values.push((data.length - 1 - index) * perData)
+
+          const yval = ((baseHeight - this.calcHeight(data[index], normalizedData, height)) / 4) * 3 + paddingTop;
+          yValues.push(yval)
+          const xval = (paddingRight + ((index) * (width - paddingRight)) / data.length)
+          xValues.push(xval)
+
+          yValuesLabel.push(yval - (scrollableInfoSize.height + scrollableInfoOffset))
+          xValuesLabel.push(xval - (scrollableInfoSize.width / 2))
+        } else {
+          if (xValuesLabel.length == 0)
+            undefinedCount += 1
+
+          allUndefined += 1
+        }
+
       }
 
-      const translateX = x.interpolate({
-        inputRange: values,
-        outputRange: xValues,
-        extrapolate: "clamp"
-      });
+      if (values.length > 0) {
+        if (values.length == 1) {
+          output.push(
+            [
+              <View key={Math.random()} style={[scrollableInfoViewStyle, { transform: [{ translateX: xValuesLabel[0] }, { translateY: yValuesLabel[0] }], width: scrollableInfoSize.width, height: scrollableInfoSize.height }]}>
+                <TextInput onLayout={() => {
+                  this.label.current.setNativeProps({ text: `${Math.floor(normalizedData[normalizedData.length - 1])}` });
+                }} style={scrollableInfoTextStyle} ref={this.label} />
+              </View>,
+              <Circle
+                key={Math.random()}
+                cx={xValues[0]}
+                cy={yValues[0]}
+                r={scrollableDotRadius}
+                stroke={scrollableDotStrokeColor}
+                strokeWidth={scrollableDotStrokeWidth}
+                fill={scrollableDotFill}
+              />
+            ])
+        } else {
 
-      const translateY = x.interpolate({
-        inputRange: values,
-        outputRange: yValues,
-        extrapolate: "clamp"
-      });
+          let lastIndex;
 
-      const labelTranslateX = x.interpolate({
-        inputRange: values,
-        outputRange: xValuesLabel,
-        extrapolate: "clamp"
-      });
 
-      const labelTranslateY = x.interpolate({
-        inputRange: values,
-        outputRange: yValuesLabel,
-        extrapolate: "clamp"
-      });
+          const interpolatedArr = [];
 
-      output.push([
-        <Animated.View
-          key={Math.random()}
-          style={[
-            scrollableInfoViewStyle,
-            {
-              transform: [
-                { translateX: labelTranslateX },
-                { translateY: labelTranslateY }
-              ],
-              width: scrollableInfoSize.width,
-              height: scrollableInfoSize.height
+          let firstvalueI
+          let lastvalueI
+
+          for (let i = 0; i < data.length; i++) {
+            if (!data[i]) {
+              const numUndefined = this.getNumUndefinedUntilNextVal(data, i);
+              const pointMultiplier = 1 / (numUndefined + 1);
+              let skip = 0;
+              for (let k = 0; k < numUndefined; k++) {
+                interpolatedArr[i + k] = this.linearInterpolate(
+                  data[i - 1],
+                  data[i + numUndefined],
+                  (k + 1) * pointMultiplier
+                );
+                skip = k;
+              }
+              i += skip;
+            } else {
+              if (firstvalueI == undefined){
+                firstvalueI = i
+              }
+              interpolatedArr[i] = data[i];
+              lastvalueI = i
             }
-          ]}
-        >
-          <TextInput
-            onLayout={() => {
+          }
+
+          x.addListener(value => {
+            const index = value.value / perData;
+            if (!lastIndex) {
+              lastIndex = index;
+            }
+      
+            let abs = Math.floor(index);
+            let percent = index - abs;
+            abs = interpolatedArr.length - abs - 1;
+            // console.log(index);
+            
+            if (interpolatedArr.length - 1 - index < firstvalueI) {
               this.label.current.setNativeProps({
-                text: `${Math.floor(data[0].data[data[0].data.length - 1])}`
+                text: `${Math.floor(normalizedData[0])}`
               });
-            }}
-            style={scrollableInfoTextStyle}
-            ref={this.label}
-          />
-        </Animated.View>,
-        <AnimatedCircle
-          key={Math.random()}
-          cx={translateX}
-          cy={translateY}
-          r={scrollableDotRadius}
-          stroke={scrollableDotStrokeColor}
-          strokeWidth={scrollableDotStrokeWidth}
-          fill={scrollableDotFill}
-        />
-      ]);
+            } else {
+              if ((interpolatedArr.length - 1 - index) > lastvalueI){
+                this.label.current.setNativeProps({
+                  text: `${Math.floor(data[lastvalueI])}`
+                });
+              }else{
+                if (index > lastIndex) {
+                  // to right
+        
+                  const base = interpolatedArr[abs];
+                  const prev = interpolatedArr[abs - 1];
+                  if (prev > base) {
+                    let rest = prev - base;
+                    this.label.current.setNativeProps({
+                      text: `${Math.floor(base + percent * rest)}`
+                    });
+                  } else {
+                    let rest = base - prev;
+                    this.label.current.setNativeProps({
+                      text: `${Math.floor(base - percent * rest)}`
+                    });
+                  }
+                } else {
+                  // to left
+        
+                  const base = interpolatedArr[abs - 1];
+                  const next = interpolatedArr[abs];
+                  percent = 1 - percent;
+                  if (next > base) {
+                    let rest = next - base;
+                    this.label.current.setNativeProps({
+                      text: `${Math.floor(base + percent * rest)}`
+                    });
+                  } else {
+                    let rest = base - next;
+                    this.label.current.setNativeProps({
+                      text: `${Math.floor(base - percent * rest)}`
+                    });
+                  }
+                }
+              }
+              }
+              
+            lastIndex = index;
+          });
+
+
+          const translateX = x.interpolate({
+            inputRange: values,
+            outputRange: xValues,
+            extrapolate: 'clamp',
+          });
+
+
+          const translateY = x.interpolate({
+            inputRange: values,
+            outputRange: yValues,
+            extrapolate: 'clamp',
+          });
+
+          const labelTranslateX = x.interpolate({
+            inputRange: values,
+            outputRange: xValuesLabel,
+            extrapolate: 'clamp',
+          });
+
+
+          const labelTranslateY = x.interpolate({
+            inputRange: values,
+            outputRange: yValuesLabel,
+            extrapolate: 'clamp',
+          });
+
+
+          output.push(
+            [
+              <Animated.View key={Math.random()} style={[scrollableInfoViewStyle, { transform: [{ translateX: labelTranslateX }, { translateY: labelTranslateY }], width: scrollableInfoSize.width, height: scrollableInfoSize.height }]}>
+                <TextInput onLayout={() => {
+                  this.label.current.setNativeProps({ text: `${Math.floor(normalizedData[normalizedData.length - 1])}` });
+                }} style={scrollableInfoTextStyle} ref={this.label} />
+              </Animated.View>,
+              <AnimatedCircle
+                key={Math.random()}
+                cx={translateX}
+                cy={translateY}
+                r={scrollableDotRadius}
+                stroke={scrollableDotStrokeColor}
+                strokeWidth={scrollableDotStrokeWidth}
+                fill={scrollableDotFill}
+              />
+            ]
+          );
+        }
+      }
+
+
+
+
     });
 
     return output;
@@ -330,9 +389,9 @@ class LineChart extends AbstractChart {
               })
               .join(" ") +
             ` ${paddingRight +
-              ((width - paddingRight) / dataset.data.length) *
-                (dataset.data.length - 1)},${(height / 4) * 3 +
-              paddingTop} ${paddingRight},${(height / 4) * 3 + paddingTop}`
+            ((width - paddingRight) / dataset.data.length) *
+            (dataset.data.length - 1)},${(height / 4) * 3 +
+            paddingTop} ${paddingRight},${(height / 4) * 3 + paddingTop}`
           }
           fill="url(#fillShadowGradient)"
           strokeWidth={0}
@@ -346,26 +405,30 @@ class LineChart extends AbstractChart {
       return this.renderBezierLine(config);
     }
 
-    const {
-      width,
-      height,
-      paddingRight,
-      paddingTop,
-      data,
-      linejoinType
-    } = config;
+    const { width, height, paddingRight, paddingTop, data, linejoinType } = config;
     const output = [];
-    const datas = this.getDatas(data);
+    const datas = this.getDatas(data).filter(e => e != undefined)
     const baseHeight = this.calcBaseHeight(datas, height);
+
     data.forEach((dataset, index) => {
-      const points = dataset.data.map((d, i) => {
-        const x =
-          (i * (width - paddingRight)) / dataset.data.length + paddingRight;
-        const y =
-          ((baseHeight - this.calcHeight(d, datas, height)) / 4) * 3 +
-          paddingTop;
-        return `${x},${y}`;
-      });
+      let points = []
+      dataset.data.forEach((d, i) => {
+
+        if (d != undefined) {
+          const x =
+            (i * (width - paddingRight)) / dataset.data.length + paddingRight;
+          const y =
+            ((baseHeight - this.calcHeight(d, datas, height)) / 4) * 3 +
+            paddingTop;
+          points.push(`${x},${y}`)
+        }
+      })
+      // const points = dataset.data.map((d, i) => {
+
+      //   return `${x},${y}`;
+      // });
+      // console.log(points);
+
       output.push(
         <Polyline
           key={index}
@@ -435,9 +498,9 @@ class LineChart extends AbstractChart {
       const d =
         this.getBezierLinePoints(dataset, config) +
         ` L${paddingRight +
-          ((width - paddingRight) / dataset.data.length) *
-            (dataset.data.length - 1)},${(height / 4) * 3 +
-          paddingTop} L${paddingRight},${(height / 4) * 3 + paddingTop} Z`;
+        ((width - paddingRight) / dataset.data.length) *
+        (dataset.data.length - 1)},${(height / 4) * 3 +
+        paddingTop} L${paddingRight},${(height / 4) * 3 + paddingTop} Z`;
       return (
         <Path
           key={index}
@@ -486,8 +549,7 @@ class LineChart extends AbstractChart {
       horizontalLabelRotation = 0,
       formatYLabel = yLabel => yLabel,
       formatXLabel = xLabel => xLabel,
-      segments,
-      transparent
+      segments
     } = this.props;
     const { x } = this.state;
     const { labels = [] } = data;
@@ -528,7 +590,6 @@ class LineChart extends AbstractChart {
             rx={borderRadius}
             ry={borderRadius}
             fill="url(#backgroundGradient)"
-            fillOpacity={transparent ? 0 : 1}
           />
           {this.props.data.legend &&
             this.renderLegend(config.width, legendOffset)}
@@ -540,57 +601,57 @@ class LineChart extends AbstractChart {
             <G>
               {withInnerLines
                 ? this.renderHorizontalLines({
-                    ...config,
-                    count: count,
-                    paddingTop,
-                    paddingRight
-                  })
+                  ...config,
+                  count: count,
+                  paddingTop,
+                  paddingRight
+                })
                 : withOuterLines
-                ? this.renderHorizontalLine({
+                  ? this.renderHorizontalLine({
                     ...config,
                     paddingTop,
                     paddingRight
                   })
-                : null}
+                  : null}
             </G>
             <G>
               {withHorizontalLabels
                 ? this.renderHorizontalLabels({
-                    ...config,
-                    count: count,
-                    data: datas,
-                    paddingTop,
-                    paddingRight,
-                    formatYLabel,
-                    decimalPlaces: this.props.chartConfig.decimalPlaces
-                  })
+                  ...config,
+                  count: count,
+                  data: datas.filter(e => e != undefined),
+                  paddingTop,
+                  paddingRight,
+                  formatYLabel,
+                  decimalPlaces: this.props.chartConfig.decimalPlaces
+                })
                 : null}
             </G>
             <G>
               {withInnerLines
                 ? this.renderVerticalLines({
-                    ...config,
-                    data: data.datasets[0].data,
-                    paddingTop,
-                    paddingRight
-                  })
+                  ...config,
+                  data: data.datasets[0].data,
+                  paddingTop,
+                  paddingRight
+                })
                 : withOuterLines
-                ? this.renderVerticalLine({
+                  ? this.renderVerticalLine({
                     ...config,
                     paddingTop,
                     paddingRight
                   })
-                : null}
+                  : null}
             </G>
             <G>
               {withVerticalLabels
                 ? this.renderVerticalLabels({
-                    ...config,
-                    labels,
-                    paddingRight,
-                    paddingTop,
-                    formatXLabel
-                  })
+                  ...config,
+                  labels,
+                  paddingRight,
+                  paddingTop,
+                  formatXLabel
+                })
                 : null}
             </G>
             <G>
@@ -644,23 +705,26 @@ class LineChart extends AbstractChart {
             </G>
           </G>
         </Svg>
-        {withScrollableDot && (
+        {
+          withScrollableDot &&
           <ScrollView
             style={StyleSheet.absoluteFill}
             contentContainerStyle={{ width: width * 2 }}
             showsHorizontalScrollIndicator={false}
             scrollEventThrottle={16}
-            onScroll={Animated.event([
-              {
-                nativeEvent: {
-                  contentOffset: { x: x }
-                }
-              }
-            ])}
+            onScroll={Animated.event(
+              [
+                {
+                  nativeEvent: {
+                    contentOffset: { x: x },
+                  },
+                },
+              ]
+            )}
             horizontal
             bounces={false}
           />
-        )}
+        }
       </View>
     );
   }
