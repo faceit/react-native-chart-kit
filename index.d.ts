@@ -8,7 +8,7 @@ import { TextProps, CircleProps, TextStyle } from "react-native-svg";
 
 export interface Dataset {
   /** The data corresponding to the x-axis label. */
-  data: number[];
+  data: any[];
   /** A function returning the color of the stroke given an input opacity value. */
   color?: (opacity: number) => string;
   /** The width of the stroke. Defaults to 2. */
@@ -422,4 +422,9 @@ export interface ChartConfig {
    * Set Info View size
    */
   scrollableInfoSize?: Size;
+
+  /**
+   *  Set bool to round values for current value label
+   */
+  roundCurrentValue?: boolean;
 }

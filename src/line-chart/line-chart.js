@@ -133,6 +133,15 @@ class LineChart extends AbstractChart {
   };
 
 
+  prepareValueToShow = (value,rounded) => {
+    if (rounded){
+      return Math.floor(value)
+    }else{
+      return value.toFixed(1)
+    }
+  }
+
+
   renderScrollableDot = config => {
     const {
       data,
@@ -148,7 +157,8 @@ class LineChart extends AbstractChart {
       scrollableInfoViewStyle,
       scrollableInfoTextStyle,
       scrollableInfoSize,
-      scrollableInfoOffset
+      scrollableInfoOffset,
+      roundCurrentValue
     } = config;
     const output = [];
     const datas = this.getDatas(data).filter(e => e != undefined);
@@ -200,7 +210,7 @@ class LineChart extends AbstractChart {
             [
               <View key={Math.random()} style={[scrollableInfoViewStyle, { transform: [{ translateX: xValuesLabel[0] }, { translateY: yValuesLabel[0] }], width: scrollableInfoSize.width, height: scrollableInfoSize.height }]}>
                 <TextInput onLayout={() => {
-                  this.label.current.setNativeProps({ text: `${Math.floor(normalizedData[normalizedData.length - 1])}` });
+                  this.label.current.setNativeProps({ text: `${this.prepareValueToShow(normalizedData[normalizedData.length - 1], roundCurrentValue)}` });
                 }} style={scrollableInfoTextStyle} ref={this.label} />
               </View>,
               <Circle
@@ -259,12 +269,12 @@ class LineChart extends AbstractChart {
             
             if (interpolatedArr.length - 1 - index < firstvalueI) {
               this.label.current.setNativeProps({
-                text: `${Math.floor(normalizedData[0])}`
+                text: `${this.prepareValueToShow(normalizedData[0], roundCurrentValue)}`
               });
             } else {
               if ((interpolatedArr.length - 1 - index) > lastvalueI){
                 this.label.current.setNativeProps({
-                  text: `${Math.floor(data[lastvalueI])}`
+                  text: `${this.prepareValueToShow(data[lastvalueI], roundCurrentValue)}`
                 });
               }else{
                 if (index > lastIndex) {
@@ -275,12 +285,12 @@ class LineChart extends AbstractChart {
                   if (prev > base) {
                     let rest = prev - base;
                     this.label.current.setNativeProps({
-                      text: `${Math.floor(base + percent * rest)}`
+                      text: `${this.prepareValueToShow(base + percent * rest, roundCurrentValue)}`
                     });
                   } else {
                     let rest = base - prev;
                     this.label.current.setNativeProps({
-                      text: `${Math.floor(base - percent * rest)}`
+                      text: `${this.prepareValueToShow(base - percent * rest, roundCurrentValue)}`
                     });
                   }
                 } else {
@@ -292,12 +302,12 @@ class LineChart extends AbstractChart {
                   if (next > base) {
                     let rest = next - base;
                     this.label.current.setNativeProps({
-                      text: `${Math.floor(base + percent * rest)}`
+                      text: `${this.prepareValueToShow(base + percent * rest, roundCurrentValue)}`
                     });
                   } else {
                     let rest = base - next;
                     this.label.current.setNativeProps({
-                      text: `${Math.floor(base - percent * rest)}`
+                      text: `${this.prepareValueToShow(base - percent * rest, roundCurrentValue)}`
                     });
                   }
                 }
