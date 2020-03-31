@@ -349,7 +349,7 @@ class LineChart extends AbstractChart {
             [
               <Animated.View key={Math.random()} style={[scrollableInfoViewStyle, { transform: [{ translateX: labelTranslateX }, { translateY: labelTranslateY }], width: scrollableInfoSize.width, height: scrollableInfoSize.height }]}>
                 <TextInput onLayout={() => {
-                  this.label.current.setNativeProps({ text: `${Math.floor(normalizedData[normalizedData.length - 1])}` });
+                  this.label.current.setNativeProps({ text: `${this.prepareValueToShow(normalizedData[normalizedData.length - 1], roundCurrentValue)}` });
                 }} style={scrollableInfoTextStyle} ref={this.label} />
               </Animated.View>,
               <AnimatedCircle
