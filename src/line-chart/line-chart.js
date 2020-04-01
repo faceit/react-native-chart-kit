@@ -181,9 +181,6 @@ class LineChart extends AbstractChart {
       let yValuesLabel = []
       let xValuesLabel = []
 
-      let undefinedCount = 0
-      let allUndefined = 0
-
       for (let index = data.length; index >= 0; index--) {
         if (data[index] != undefined) {
           values.push((data.length - 1 - index) * perData)
@@ -195,13 +192,7 @@ class LineChart extends AbstractChart {
 
           yValuesLabel.push(yval - (scrollableInfoSize.height + scrollableInfoOffset))
           xValuesLabel.push(xval - (scrollableInfoSize.width / 2))
-        } else {
-          if (xValuesLabel.length == 0)
-            undefinedCount += 1
-
-          allUndefined += 1
         }
-
       }
 
       if (values.length > 0) {
@@ -228,33 +219,40 @@ class LineChart extends AbstractChart {
           let lastIndex;
 
 
-          const interpolatedArr = [];
+          let interpolatedArr = [];
 
           let firstvalueI
           let lastvalueI
 
-          for (let i = 0; i < data.length; i++) {
-            if (!data[i]) {
-              const numUndefined = this.getNumUndefinedUntilNextVal(data, i);
-              const pointMultiplier = 1 / (numUndefined + 1);
-              let skip = 0;
-              for (let k = 0; k < numUndefined; k++) {
-                interpolatedArr[i + k] = this.linearInterpolate(
-                  data[i - 1],
-                  data[i + numUndefined],
-                  (k + 1) * pointMultiplier
-                );
-                skip = k;
+          const undefinedArr = data.filter(e => e == undefined)
+          
+          if (undefinedArr.length != 0){
+            for (let i = 0; i < data.length; i++) {
+              if (!data[i]) {
+                const numUndefined = this.getNumUndefinedUntilNextVal(data, i);
+                const pointMultiplier = 1 / (numUndefined + 1);
+                let skip = 0;
+                for (let k = 0; k < numUndefined; k++) {
+                  interpolatedArr[i + k] = this.linearInterpolate(
+                    data[i - 1],
+                    data[i + numUndefined],
+                    (k + 1) * pointMultiplier
+                  );
+                  skip = k;
+                }
+                i += skip;
+              } else {
+                if (firstvalueI == undefined){
+                  firstvalueI = i
+                }
+                interpolatedArr[i] = data[i];
+                lastvalueI = i
               }
-              i += skip;
-            } else {
-              if (firstvalueI == undefined){
-                firstvalueI = i
-              }
-              interpolatedArr[i] = data[i];
-              lastvalueI = i
             }
+          }else{
+            interpolatedArr = data
           }
+          
 
           x.addListener(value => {
             const index = value.value / perData;
@@ -282,6 +280,7 @@ class LineChart extends AbstractChart {
         
                   const base = interpolatedArr[abs];
                   const prev = interpolatedArr[abs - 1];
+                  
                   if (prev > base) {
                     let rest = prev - base;
                     this.label.current.setNativeProps({
