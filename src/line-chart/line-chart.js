@@ -558,7 +558,8 @@ class LineChart extends AbstractChart {
       horizontalLabelRotation = 0,
       formatYLabel = yLabel => yLabel,
       formatXLabel = xLabel => xLabel,
-      segments
+      segments,
+      transparent
     } = this.props;
     const { x } = this.state;
     const { labels = [] } = data;
@@ -599,6 +600,7 @@ class LineChart extends AbstractChart {
             rx={borderRadius}
             ry={borderRadius}
             fill="url(#backgroundGradient)"
+            fillOpacity={transparent ? 0 : 1}
           />
           {this.props.data.legend &&
             this.renderLegend(config.width, legendOffset)}
