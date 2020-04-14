@@ -17,6 +17,7 @@ let AnimatedCircle = Animated.createAnimatedComponent(Circle);
 class LineChart extends AbstractChart {
 
   label = React.createRef();
+  xListener
 
   state = {
     x: new Animated.Value(0),
@@ -197,6 +198,10 @@ class LineChart extends AbstractChart {
 
       if (values.length > 0) {
         if (values.length == 1) {
+          if (this.xListener){
+            x.removeListener(this.xListener);
+            this.xListener = undefined
+          }
           output.push(
             [
               <View key={Math.random()} style={[scrollableInfoViewStyle, { transform: [{ translateX: xValuesLabel[0] }, { translateY: yValuesLabel[0] }], width: scrollableInfoSize.width, height: scrollableInfoSize.height }]}>
@@ -254,7 +259,14 @@ class LineChart extends AbstractChart {
           }
           
 
-          x.addListener(value => {
+          if (this.xListener){
+            x.removeListener(this.xListener);
+            this.xListener = undefined
+          }
+
+          x.setValue(0)
+
+          this.xListener = x.addListener(value => {
             const index = value.value / perData;
             if (!lastIndex) {
               lastIndex = index;
