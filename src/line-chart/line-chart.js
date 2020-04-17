@@ -233,7 +233,7 @@ class LineChart extends AbstractChart {
           
           if (undefinedArr.length != 0){
             for (let i = 0; i < data.length; i++) {
-              if (!data[i]) {
+              if (!data[i] && data[i] !== 0) {
                 const numUndefined = this.getNumUndefinedUntilNextVal(data, i);
                 const pointMultiplier = 1 / (numUndefined + 1);
                 let skip = 0;
@@ -271,7 +271,6 @@ class LineChart extends AbstractChart {
             if (!lastIndex) {
               lastIndex = index;
             }
-      
             let abs = Math.floor(index);
             let percent = index - abs;
             abs = interpolatedArr.length - abs - 1;
